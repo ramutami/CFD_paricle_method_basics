@@ -24,9 +24,9 @@ module parameters_for_simulation
     integer, parameter :: output_interval=20
     !------------change allowed--------------!
 
-
-
 end module parameters_for_simulation
+
+
 
 program main 
     use test_module
