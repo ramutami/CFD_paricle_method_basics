@@ -25,7 +25,7 @@ $$\Delta t$$
 後）の粒子の位置
 $$\boldsymbol{r}$$
 と粒子の速度
-$$ \boldsymbol{u}$$
+$$\boldsymbol{u}$$
 を得ることができる。
 
 ### プログラムの概要
