@@ -16,15 +16,22 @@ module parameters_for_simulation
     !pargicle_distance: 初期の粒子間距離[m]
     !time_interval: 計算ステップの時間幅[s]
     !output_interval: 何ステップごとに粒子の位置を出力するか
+    !particle_limit: 粒子数の上限を与える
+    !finish_time: 終了時刻[s]
 
     !------------change allowed--------------!
     integer,parameter :: dimention=3
-    integer,parameter :: paricle_distance=0.025
-    integer,parameter :: time_interval=0.001
+    real(8),parameter :: paricle_distance=0.025
+    real(8),parameter :: time_interval=0.001
     integer, parameter :: output_interval=20
+    integer,parameter :: particle_limit=5000
+    real(8),parameter :: finish_time
+    
     !------------change allowed--------------!
 
 end module parameters_for_simulation
+
+
 
 
 
