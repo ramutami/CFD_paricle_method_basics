@@ -47,12 +47,23 @@ module global_variables
     !global変数：すべてのmoduleのsubroutineで参照可能な変数
     !allocatはsubroutineで行う。
 
+    !particle_position: 粒子iのx,y,z座標をparticle_position(i,x=1/y=2/z=3)に収納する。
+    !particle_velocity: 粒子iのx,y,z方向の速度ををparticle_velocity(i,x=1/y=2/z=3)に収納する。
+    !accleration: 粒子iに関する加速度をacceleration(i,x=1/y=2/z=3)に収納する。
+    !number_density: 重みつき粒子数密度Σw(ri-rj)
+
     real(8),allocatable :: particle_position(:,:)
+    real(8),allocatable :: particle_velocity(:,:)
+    real(8),allocatable :: acceleration(:,:)
+    real(8),allocatable :: number_density(:)
 
     contains
     subroutine allocate_global_variables
         implicit none
-        allocate(particle_position(3,particle_limit))
+        allocate(particle_position(particle_limit,3))
+        allocate(particle_velocity(particle_limit,3))
+        allocate(acceleration(particle_limit,3))
+        allocate(number_density(particle_limit))
     end subroutine
 
 end module global_variables
@@ -84,21 +95,23 @@ end module initial_particle_position_velocity_particle_type
 
 
 program main 
+    !---------modules----------!
     use test_module
     use global_variables
+    !---------modules----------!
+
     use initial_particle_position_velocity_particle_type
     implicit none
 
+
+    !-------calling subroutines-------!
     call allocate_global_variables()
     call water_tank_and_water_column()
+    !-------calling subroutines-------!
+
+
+
  
     write(*,*) particle_position(1,1)
-    call hoge()
 
-    stop
-    contains
-    subroutine hoge()   
-        implicit none
-        write(*,*) particle_position(1,1)
-    end subroutine
 end program
