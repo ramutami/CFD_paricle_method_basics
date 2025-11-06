@@ -69,7 +69,7 @@ $$-1/\rho\cdot\nabla P$$
 $$\nu\nabla^2\mathbf{u}$$、
 $$\boldsymbol{g}$$
 の三つの項目で構成されていることがわかり、それぞれ圧力項、粘性項、重力項と呼ばれる。
-　
+<br>
 　mainLoopOfSimuationにおいては、まず重力項と粘性項をcalGravity、calViscosityによって計算し、それら加速度を用いて一旦粒子の情報をアップデートする。次に、圧力項をcalPressureGradientによって計算し、それを用いて再度粒子の情報をアップデートする。また、calPressureGradientを計算するためにはまず、calPressureを用いて粒子の圧力を計算する。
 
 
