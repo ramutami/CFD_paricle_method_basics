@@ -32,14 +32,14 @@ $$\boldsymbol{u}$$
 
 
 
-```c++:
+```fortran:
 program main
 |-initial_particle_position_velocity_particle_type
 |-calConstantParameter
-|-mainLoopOfSimuation   //k~k+1ステップに粒子の情報を更新するルーチン
-  |-calGravity
-  |-calViscosity
-  |-moveParticle
+|-mainLoopOfSimuation   
+  |-calGravity          
+  |-calViscosity        
+  |-moveParticle        
   |-collision
   |-calPressure
     |-calNumberDensity
@@ -53,6 +53,31 @@ program main
   |-moveParticleUsingPressureGradient
   |-if (timestep = outputstep) {-writeData_inVtuFormat}
 ```
+
+### それぞれのsubroutineの説明
+
+<ins>mainLoopOfSimuation</ins>
+
+k~k+1ステップに粒子の情報を更新するルーチン
+
+<ins>calGravity</ins>
+
+重力による粒子の加速を計算するルーチン
+
+<ins>calViscosity</ins>
+
+粘性項による粒子の加速を計算するルーチン
+
+<ins>moveParticle</ins>
+
+CalGravity,calViscosityで計算した加速度をつかって粒子の位置・速度を更新するルーチン
+
+
+
+
+
+    
+
 
 
 ## 参考文献
