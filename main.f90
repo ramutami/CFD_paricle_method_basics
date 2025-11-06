@@ -1,3 +1,13 @@
+!------------change allowed--------------!
+    !module parameters_for_simulationを適宜変更すること。
+    !module inital_condition下に初期条件について定めるsubroutineを作る必要がある。
+    
+!------------change allowed--------------!
+
+
+
+
+
 module test_module
     implicit none
     contains
@@ -25,11 +35,49 @@ module parameters_for_simulation
     real(8),parameter :: time_interval=0.001
     integer, parameter :: output_interval=20
     integer,parameter :: particle_limit=5000
-    real(8),parameter :: finish_time
-    
+    real(8),parameter :: finish_time = 2.0
     !------------change allowed--------------!
 
 end module parameters_for_simulation
+
+module global_variables
+    use parameters_for_simulation
+    implicit none
+
+    !global変数：すべてのmoduleのsubroutineで参照可能な変数
+    !allocatはsubroutineで行う。
+
+    real(8),allocatable :: particle_position(:,:)
+
+    contains
+    subroutine allocate_global_variables
+        implicit none
+        allocate(particle_position(3,particle_limit))
+    end subroutine
+
+end module global_variables
+
+module initial_particle_position_velocity_particle_type
+    use global_variables
+    implicit none
+
+    !以下のsubroutineで初期の粒子の配置、壁の配置、ダミー壁の配置、粒子速度を定める。
+    !壁、ダミー壁はすべて粒子として扱う。
+    !粒子についての位置particle_positions(dim,n)を定めた上で、
+    !その粒子のtype:particle_type(n)が液体粒子なのか壁なのかダミー壁なのかを(後から)定めることで、
+    !液体粒子、壁、ダミー壁の位置を定めることができる。
+    !粒子速度については、particle_velocity(dim,n)を定める。
+
+    contains
+    subroutine water_tank_and_water_column()
+        implicit none
+
+        particle_position(1,1) = 1.0
+    
+    end subroutine
+
+end module initial_particle_position_velocity_particle_type
+
 
 
 
@@ -37,6 +85,20 @@ end module parameters_for_simulation
 
 program main 
     use test_module
+    use global_variables
+    use initial_particle_position_velocity_particle_type
     implicit none
-    
+
+    call allocate_global_variables()
+    call water_tank_and_water_column()
+ 
+    write(*,*) particle_position(1,1)
+    call hoge()
+
+    stop
+    contains
+    subroutine hoge()   
+        implicit none
+        write(*,*) particle_position(1,1)
+    end subroutine
 end program
