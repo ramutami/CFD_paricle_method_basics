@@ -32,11 +32,11 @@ $$\boldsymbol{u}$$
 
 
 
-```fortran:
+```c++:
 program main
 |-initial_particle_position_velocity_particle_type
 |-calConstantParameter
-|-mainLoopOfSimuation   !k~k+1ステップに粒子の情報を更新するルーチン
+|-mainLoopOfSimuation   //k~k+1ステップに粒子の情報を更新するルーチン
   |-calGravity
   |-calViscosity
   |-moveParticle
