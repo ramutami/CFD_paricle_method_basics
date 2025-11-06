@@ -56,20 +56,16 @@ program main
 
 ### それぞれのsubroutineの説明
 
-<ins>mainLoopOfSimuation</ins>
-
+<ins>mainLoopOfSimuation</ins><br>
 k~k+1ステップに粒子の情報を更新するルーチン
 
-<ins>calGravity</ins>
-
+<ins>calGravity</ins><br>
 重力による粒子の加速を計算するルーチン
 
-<ins>calViscosity</ins>
-
+<ins>calViscosity</ins><br>
 粘性項による粒子の加速を計算するルーチン
 
-<ins>moveParticle</ins>
-
+<ins>moveParticle</ins><br>
 CalGravity,calViscosityで計算した加速度をつかって粒子の位置・速度を更新するルーチン
 
 
