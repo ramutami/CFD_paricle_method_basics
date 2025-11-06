@@ -34,7 +34,7 @@ int main
 |-initial_particle_position_velocity_particle_type
 |-calConstantParameter
 |-mainLoopOfSimuation
-  |
+  |-calGravity
   |
   |
 
