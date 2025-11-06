@@ -2,7 +2,7 @@
 粒子法を用いた簡単な水柱崩壊のプログラム
 
 ## このプログラムについて
-このプログラムでは、粒子法を用いた水柱崩壊のシミュレーションを行う。以下の参考書の付録のc++で書かれたプログラムを、FORTRANで使えるようにすることを主な目的としている。。
+このプログラムでは、粒子法を用いた水柱崩壊のシミュレーションを行う。以下の参考書の付録のc++で書かれたプログラムを、FORTRANで使えるようにすることを主な目的としている。
 
 ### 参考書
 粒子法入門〜流体シミュレーションの基礎から並列計算と可視化まで〜,丸善出版
@@ -28,9 +28,7 @@ $$\boldsymbol{r}$$
 $$\boldsymbol{u}$$
 を得ることができる。
 
-### プログラムの概要
-
-
+## プログラムの概要
 
 ```fortran:
 program main
@@ -54,19 +52,47 @@ program main
   |-if (timestep = outputstep) {-writeData_inVtuFormat}
 ```
 
-### それぞれのsubroutineの説明
+## それぞれのsubroutineの説明
 
-<ins>mainLoopOfSimuation</ins><br>
-k~k+1ステップに粒子の情報を更新するルーチン
+### <ins>mainLoopOfSimuation</ins>
 
-<ins>calGravity</ins><br>
-重力による粒子の加速を計算するルーチン
+　k~k+1ステップに粒子の情報を更新するルーチン。以下のcalGravity~movePariceUsingPressureGradientで構成される。
 
-<ins>calViscosity</ins><br>
-粘性項による粒子の加速を計算するルーチン
+　今、改めてナビエストークス方程式を見てみると、
 
-<ins>moveParticle</ins><br>
-CalGravity,calViscosityで計算した加速度をつかって粒子の位置・速度を更新するルーチン
+$$\dfrac{D\boldsymbol{u}}{Dt}  = -\dfrac{1}{\rho}\nabla P +\nu\nabla^2\mathbf{u}+\boldsymbol{g}$$
+
+のようになっており、流体の加速度
+$$D\boldsymbol{u}/Dt$$は
+$$-1/\rho\cdot\nabla P$$
+、
+$$\nu\nabla^2\mathbf{u}$$、
+$$\boldsymbol{g}$$
+の三つの項目で構成されていることがわかり、それぞれ圧力項、粘性項、重力項と呼ばれる。
+　mainLoopOfSimuationにおいては、まず重力項と粘性項をcalGravity、calViscosityによって計算し、それら加速度を用いて一旦粒子の情報をアップデートする。次に、圧力項をcalPressureGradientによって計算し、それを用いて再度粒子の情報をアップデートする。また、calPressureGradientを計算するためにはまず、calPressureを用いて粒子の圧力を計算する。
+
+
+
+<ins>calGravity</ins>：重力項による粒子の加速を計算するルーチン
+
+<ins>calViscosity</ins>：粘性項による粒子の加速を計算するルーチン
+
+<ins>moveParticle</ins>：calGravity,calViscosityで計算した加速度をつかって粒子の位置・速度を更新するルーチン
+
+<ins>collision</ins>：例外処理。異常接近した粒子があった場合に、粒子間距離を広げる。
+
+<ins>calPressure</ins>：各粒子位置での圧力を計算するルーチン。以下のcalNumberDensity~setMinimumPressureで構成される
+
+- <ins>calPressure</ins>：
+
+
+<ins>calPressureGradient</ins>：圧力項による粒子の加速を計算するルーチン
+
+<ins>moveParticleusingPressureGradient</ins>：calPressureGradientで計算した加速度を使って粒子の位置・速度を更新するルーチン。ついでに、加速度をゼロにリセットする。
+
+
+
+
 
 
 
