@@ -31,12 +31,19 @@ $$\boldsymbol{u}$$
 ### プログラムの概要
 
 int main
+
 |-initial_particle_position_velocity_particle_type
+
 |-calConstantParameter
+
 |-mainLoopOfSimuation
+
   |-calGravity
+
   |
+  
   |
+  
 
 ## 参考文献
 [Lee et al] (https://www.sciencedirect.com/science/article/pii/S0045782519305067)
