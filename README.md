@@ -128,7 +128,7 @@ $$
 # 各ルーチンの詳細について
 
 ## writeData_inVtuFormat
-VTKフォーマットは可視化のためのフォーマット。空行と空白を同様に扱う。基本は以下の様な構造になっている.
+VTKフォーマットは可視化のためのフォーマット。空行と空白を同様に扱う。VTKファイルは基本は以下の様な構造になっている.
 
 ```xml
 <?xml version='1.0',encoding='UTF-8'?>
@@ -195,6 +195,7 @@ VTKフォーマットは可視化のためのフォーマット。空行と空�
 </VTKFile>
 
 ```
+<br>
 
 ### VTKFile 条件子
 ```xml
@@ -207,6 +208,7 @@ VTKフォーマットは可視化のためのフォーマット。空行と空�
 <ins>version</ins>：VTKフォーマットの仕様のバージョン。1.0でいいのかな。
 
 <ins>type</ins>：stucturedは格子データのような規則正しく並んだデータ、unstructuredは粒子データのような不規則に並んだデータ。色々あるっぽいが、粒子法では```unstructuredGrid```を用いる。unstructuredGridは拡張子```.vtu```に対応しているので、このコードでは```.vtu```ファイルに出力している。
+<br>
 
 ### points
 ```xml
@@ -235,18 +237,87 @@ VTKフォーマットは可視化のためのフォーマット。空行と空�
 0.0 0.0 0.0 0.0 0.0 0.1 ...
 ```
 のように認識される。よって、```NumberOfComponents='3'```で、「この座標は三次元やで。やから３つごとにデータを読み取りなさいな」と言う指定を入れてやる必要がある。```type```はデータの型（INTなど）、```name```はまあ、自由に設定していいそのDataarrayの名前。```Format```はasciiかbinary。大規模計算とかだとbinaryの方がいいらしい。
+<br>
 
-
-
-
+### pointdata
+各粒子にデータを載せる。圧力だったり温度だったり粒子の種類だったり。例えば温度という一次元データを各粒子に持たせることを考えると、
+```xml
+<Dataarray NumberOfComponents='1' type='Int32/Float32/etc' Name='temperature' format='ascii'>
+    273
+    280
+    250
+     .
+     .
+     .
+</Dataarray>
+```
+ここでも、```NumberOfComponetnsは次元。paraviewなら三次元データ（速度場とか）も可視化できるそうな。すごいッピ！
 ### cells
-ざっくばらんにいって仕舞えば、メッシュ。一つのメッシュのことをセルと言う。例えば下のi,j,k,l番目の粒子は四角形のセルを作っている。
+ざっくばらんにいって仕舞えば、メッシュ。一つのメッシュのことをセルと言う。例えば下の i、j、k、l 番目の粒子は四角形のセルを作っている。
 ```
    i .__. k
      |  |
    j .__. l
 ```
-そんな感じに、いろんな形のセルをいくらでも作ることができて、それを指定するのが```<cells>```の項目。（つまり、粒子集合の部分集合がセル）
+そんな感じに、いろんな形のセルをいくらでも作ることができて、それを指定するのが```<cells>```の項目。（つまり、粒子集合の部分集合がセル）必ず、以下の三つをもつ。
+```xml
+<Cells>
+    <Dataarray type='Int32' Name='connectivity' format='ascii'>
+    <Dataarray type='Int32' Name='offsets' format='ascii'>
+    <Dataarray type='Int32' Name='types 'format='ascii'>
+</Cells>
+```
+<br>
 
+<ins>**connectivity**</ins>
+まずconnectivityだが、これはcellの頂点に関するデータ。
+```xml
+<Dataarray type='Int32' Name='connectivity' format='ascii'>
+    0 3 5
+    3 5 7 8
+      .
+      .
+      .
+</Datarray>
+```
+上のコードなら、1,4,6番目の粒子で三角形のセルを作り、4,6,8,9番目で４角形のセルを作り...という風。（vtkファイルの配列は0始まりなので、```<points>```で定めた粒子において、１番目の粒子のindexが0となる。~~0から始まるの直感的じゃなさすぎてほんと嫌い。Fortranを見習ってほしい。~~）ただ、何度も述べるように、xmlは改行を認識しないので実際には
+```xml
+<Dataarray type='Int32' Name='connectivity' format='ascii'>
+    0 3 5 3 5 7 8...
+</Datarray>
+```
+のように認識されている。よって、どこでcellを区切るのかを明示してやる必要がある。それをするのが以下の```offset```
+<br>
 
+<ins>**offset**</ins>
+```xml
+<Dataarray type='Int32' Name='offsets' format='ascii'>
+    3
+    7
+    .
+    .
+    .
+</Dataarray>
+```
+上のコードは、```connectivity```において「三番目までの粒子番号が最初のセル、（四番目から）七番目までの粒子番号が二つ目のセル、...」という指定を行う。
+<br>
+
+<ins>**types**</ins>
+それぞれのcellが三角形なのか四角形なのか、みたいなことを明示してやる必要がある。それぞれの形状とtype番号との対応は[リンク](https://vtk.org/doc/nightly/html/vtkCellType_8h_source.html)にある。今、
+```cpp
+  VTK_TRIANGLE = 5,
+  VTK_QUAD = 9,
+```
+なので、```types```は以下のように書けば良いとわかる。
+```xml
+<Dataarray type='Int32' Name='types 'format='ascii'>
+    5
+    9
+    .
+    .
+    .
+</Dataarray>
+```
+<br>
+### celldata
 
