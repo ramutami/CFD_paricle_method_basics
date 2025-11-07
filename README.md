@@ -72,7 +72,7 @@ end program
 
 ### mainLoopOfSimuation
 
-　k~k+1ステップに粒子の情報を更新するルーチン。以下のcalGravity~movePariceUsingPressureGradientで構成される。
+　k〜k+1ステップに粒子の情報を更新するルーチン。以下のcalGravity~movePariceUsingPressureGradientで構成される。
 
 　今、改めてナビエストークス方程式を見てみると、
 
