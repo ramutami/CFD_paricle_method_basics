@@ -2,7 +2,7 @@
 粒子法を用いた簡単な水柱崩壊のプログラム
 
 # このプログラムについて
-このプログラムでは、粒子法を用いた水柱崩壊のシミュレーションを行う。以下の参考書の付録のc++で書かれたプログラムを、FORTRANで使えるようにすることを主な目的としている。
+このプログラムでは、粒子法を用いた水柱崩壊のシミュレーションを行う。以下の参考書の付録のc++で書かれたプログラムを、FORTRANで使えるようにすることを主な目的としている。また、この文章は自分の頭の中を整理するために書いていると言う節もある。
 
 ## 参考書
 粒子法入門〜流体シミュレーションの基礎から並列計算と可視化まで〜,丸善出版
@@ -128,25 +128,68 @@ $$
 # 各ルーチンの詳細について
 
 ## writeData_inVtuFormat
-VTKフォーマットは、paraviewを用いた可視化のためのフォーマットで、以下の様な構造になっている.
+VTKフォーマットは可視化のためのフォーマット。空行と空白を同様に扱う。基本は以下の様な構造になっている.
 
 ```xml
 <?xml version='1.0',encoding='UTF-8'?>
-<VTKFile xmlns='VTK' byte_order='LittleEndian' version='0,1' type='UnstructuredGrid'>
+<VTKFile xmlns='VTK' byte_order='LittleEndian' version='0.1' type='UnstructuredGrid'>
     <unstructuredGrid>
-    
+        <Piece NUmberOfcells='50000' NumberOfPoints='50000'>
+
+            <Points>
+                <Dataarray NumberOfComponents='2or3' type='Float32' Name='Position' format='ascii'>
+                    <!座標データ、n行2/3列、nは粒子数、2/3は空間の次元>
+                </Dataarray>
+            </Points>
+
+            <PointData>
+                <Dataarray NumberOfComponents='i' type='Int32/Float32/etc' Name='hoge' format='ascii'>
+                    <!粒子のhoge属性に関するデータ、n行i列、nは粒子数iはデータの次元>
+                </Dataarray>
+                <Dataarray NumberOfComponents='j' type='Int32/Float32/etc' Name='Foo' format='ascii'>
+                    <!粒子のFoo属性に関するデータ、n行j列、nは粒子数iはデータの次元>
+                </Dataarray>
+                    .
+                    .
+                    .
+            </PointData>
+
+            <Cells>
+                <Dataarray　type='Int32' Name='connectivity' format='ascii'>
+                    <!後ほど解説>
+                </Dataarray>
+                <Dataarray　type='Int32' Name='offsets' format='ascii'>
+                    <!後ほど解説>
+                </Dataarray>
+                <Dataarray type='Int32' Name='types 'format='ascii'>
+                    <!後ほど解説>
+                </Dataarray>
+            </Cells>
+            
+            <Celldata>
+                <Dataarray NumberOfComponents='i' type='Int32/Float32/etc' Name='hage' format='ascii'>
+                    <!cellのhage属性に関するデータ、m行i列、mはcellの数、iはデータの次元>
+                </Dataarray>
+                <Dataarray NumberOfComponents='j' type='Int32/Float32/etc' Name='Fooo' format='ascii'>
+                    <!cellのFooo属性に関するデータ、m行j列、mはcellの数、jはデータの次元>
+                </Dataarray>
+                    .
+                    .
+                    .
+            </Celldata>
+        </Piece>
     </unstructuredGrid>
 </VTKFile>
 ```
-構造だけ抜き出すと以下のよう。[参考](https://docs.vtk.org/en/latest/vtk_file_formats/vtkxml_file_format.html?utm_source=chatgpt.com)
+主要な構造だけ抜き出すと以下のよう。[参考](https://docs.vtk.org/en/latest/vtk_file_formats/vtkxml_file_format.html?utm_source=chatgpt.com)
 ```xml
-<VTKFile type="UnstructuredGrid" ...>
+<VTKFile type="UnstructuredGrid" ... >
   <UnstructuredGrid>
     <Piece NumberOfPoints="#" NumberOfCells="#">
-        <PointData>...<!-あ->...</PointData>
-        <CellData>...</CellData>
         <Points>...<!-座標->...</Points>
+        <PointData>...<!-あ->...</PointData>
         <Cells>...</Cells>
+        <CellData>...</CellData>
     </Piece>
   </UnstructuredGrid>
 </VTKFile>
@@ -154,6 +197,10 @@ VTKフォーマットは、paraviewを用いた可視化のためのフォーマ
 ```
 
 ### VTKFile 条件子
+```xml
+<VTKFile xmlns='VTK' byte_order='LittleEndian' version='1.0' type='UnstructuredGrid'>
+```
+で指定される、VTKファイルに関する諸々のパラメタ。
 
 <ins>byte_order</ins>：エンディアン。（データを前から並べるか、後ろから並べるか、くらいの認識。）macはLittleEndian。
 
@@ -162,18 +209,44 @@ VTKフォーマットは、paraviewを用いた可視化のためのフォーマ
 <ins>type</ins>：stucturedは格子データのような規則正しく並んだデータ、unstructuredは粒子データのような不規則に並んだデータ。色々あるっぽいが、粒子法では```unstructuredGrid```を用いる。unstructuredGridは拡張子```.vtu```に対応しているので、このコードでは```.vtu```ファイルに出力している。
 
 ### points
-各粒子の座標情報が入る。例えば三次元なら、以下のよう。
-```datastudio
+```xml
+<Points>
+    <Dataarray NumberOfComponents='2or3' type='Float32' Name='Position' format='ascii'>
+        0.0 0.0 0.0
+        0.0 0.0 0.1
+        0.0 0.0 0.2
+            .
+            .
+            .
+    </Dataarray>
+</Points>
+```
+各粒子の座標情報が入る。```NumberOfComponents```は空間の次元。xmlは改行と空白を区別しないので、
+```xml
 0.0 0.0 0.0
 0.0 0.0 0.1
 0.0 0.0 0.2
-.
-.
-.
+    .
+    .
+    .
 ```
+の部分は
+```xml
+0.0 0.0 0.0 0.0 0.0 0.1 ...
+```
+のように認識される。よって、```NumberOfComponents='3'```で、「この座標は三次元やで。やから３つごとにデータを読み取りなさいな」と言う指定を入れてやる必要がある。```type```はデータの型（INTなど）、```name```はまあ、自由に設定していいそのDataarrayの名前。```Format```はasciiかbinary。大規模計算とかだとbinaryの方がいいらしい。
 
-### 
 
+
+
+### cells
+ざっくばらんにいって仕舞えば、メッシュ。一つのメッシュのことをセルと言う。例えば下のi,j,k,l番目の粒子は四角形のセルを作っている。
+```
+   i .__. k
+     |  |
+   j .__. l
+```
+そんな感じに、いろんな形のセルをいくらでも作ることができて、それを指定するのが```<cells>```の項目。（つまり、粒子集合の部分集合がセル）
 
 
 
