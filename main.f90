@@ -34,7 +34,7 @@ module parameters_for_simulation
     real(8),parameter :: paricle_distance=0.025
     real(8),parameter :: time_interval=0.001
     integer, parameter :: output_interval=20
-    integer,parameter :: particle_limit=5000
+    integer,parameter :: particle_limit=1
     real(8),parameter :: finish_time = 2.0
     !------------change allowed--------------!
 
@@ -90,6 +90,59 @@ module initial_particle_position_velocity_particle_type
 end module initial_particle_position_velocity_particle_type
 
 
+module output_module
+    use global_variables
+    implicit none
+
+    contains
+    subroutine writedatainvtuformat(file_number)
+        !VTKファイルに粒子についての情報を出力するサブルーチン。
+        !file_numberは（連番）VTKファイルの番号。
+        implicit none
+        character(128) :: file_name
+        character(256) :: temp_char
+        integer,intent(in) :: file_number
+        integer :: i
+
+        !./output_vtuファイル下の、output_(file_number).vtuに出力する。
+        !現在、file_numberは６桁まで対応している。
+        write(file_name,'(A,I6.6,A)') "./output_vtu/output_",file_number,".vtu"
+        
+        !出力部分
+        open(10,file=file_name,action='write',status='replace',position='append')
+
+        !地の文
+        write(10,'(A)') "<?xml version='1.0',encoding='UTF-8'?>"
+        write(10,'(A)')"<VTKFile xmlns='VTK' byte_order='LittleEndian' version='0.1' type='UnstructuredGrid'>"
+        write(10,'(A)') "   <UnstructuredGrid>"
+        write(temp_char,'(A,I0,A,I0,A)')"      <Piece NUmberOfcells='",particle_limit,"' NumberOfPoints='",particle_limit,"'>"
+        write(10,'(A)') temp_char
+        write(10,*) 
+        write(10,'(A)') "         <Points>"
+        write(10,'(A)') "            <DataArray NumberOfComponents='3' type='Float32' Name='Particle_Position' format='ascii'>"
+        
+        !粒子の座標出力
+        do i = 1,particle_limit
+            write(10,'(A)',advance='no')"            " 
+            write(10,*)particle_position(i,:)
+        end do
+
+        !地の文
+        write(10,'(A)') "            </DataArray>"
+        write(10,'(A)') "         </Points>"
+        write(10,*)
+        write(10,'(A)') "      </Piece>"
+        write(10,'(A)') "   </UnstructuredGrid>"
+        write(10,'(A)') "</VTKFile>"
+
+
+
+        close(10)
+
+
+    end subroutine writedatainvtuformat
+end module output_module
+
 
 
 
@@ -98,6 +151,7 @@ program main
     !---------modules----------!
     use test_module
     use global_variables
+    use output_module
     !---------modules----------!
 
     use initial_particle_position_velocity_particle_type
@@ -107,6 +161,7 @@ program main
     !-------calling subroutines-------!
     call allocate_global_variables()
     call water_tank_and_water_column()
+    call writedatainvtuformat(2)
     !-------calling subroutines-------!
 
 
