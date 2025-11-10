@@ -96,13 +96,15 @@ module initial_particle_position_velocity_particle_type
         ny_watertank = floor((y_watertank+particle_distance*epsilon)/particle_distance)
         nx_watercolumn = floor((x_watercolumn+particle_distance*epsilon)/particle_distance)
         ny_watercolumn = floor((y_watercolumn+particle_distance*epsilon)/particle_distance)
-        write(*,*) "water tank size : ", nx_watertank,ny_watertank
+        write(*,*) "water tank size :", nx_watertank,ny_watertank
+        write(*,*) "water column size : ",nx_watercolumn,ny_watercolumn
 
         !num_of_particle
         !必要な粒子数のメモリの数：
-        !壁については　4*ny_watertank+4*ny_watertank+4*nx_watertank+4+4
+        !壁については　(nxtank+2*(wallthickness+dummywallthickness))*(nytank+wallthicnkness+dummywallthickness)-nx_tank*ny_tank
         !水柱については　nx_watercolumn*ny_watercolumn
-        number_of_particles = 4*(2*ny_watertank+nx_watertank+2)
+        number_of_particles = (nx_watertank+2*(wallthickness+dummywallthickness))*(ny_watertank+wallthickness+dummywallthickness)-&
+        & nx_watertank*ny_watertank
         number_of_particles = number_of_particles + nx_watercolumn*ny_watercolumn
         write(*,*) 'number of particles : ', number_of_particles
 
@@ -198,7 +200,7 @@ module initial_particle_position_velocity_particle_type
         !end $omp parallel do
 
         !壁
-        temp_int_1 = wallthickness*dummywallthickness*(nx_watertank+2*(wallthickness+dummywallthickness))
+        temp_int_1 = (wallthickness+dummywallthickness)*(nx_watertank+2*(wallthickness+dummywallthickness))
         temp_int_2 = 2*(wallthickness+dummywallthickness)
         temp_int_3 = 1-wallthickness-dummywallthickness
         !$omp parallel do private(i,iX)
@@ -254,9 +256,23 @@ module initial_particle_position_velocity_particle_type
             particle_acceleration(i,:) = real(0.0,kind=8)
             particle_type(i) = wall
             Original_layer(i) = iY*particle_distance
+            write(*,*) i
             end do
         end do
         !end $omp parallel do
+        
+        temp_int_1 = (nx_watertank+2*(wallthickness+dummywallthickness))*(ny_watertank+wallthickness+dummywallthickness)-&
+        & nx_watertank*ny_watertank
+        do iY = 1,ny_watercolumn   
+            do iX = 1,nx_watercolumn
+            i = temp_int_1 + (iY-1)*nx_watercolumn+iX
+            particle_position(i,:) = (/iX*particle_distance,iY*particle_distance,real(0.0,kind=8)/)
+            particle_velocity(i,:) = real(0.0,kind=8)
+            particle_acceleration(i,:) = real(0.0,kind=8)
+            particle_type(i) = fluid
+            Original_layer(i) = iY*particle_distance
+            end do
+        end do
 
     end subroutine
 
@@ -401,7 +417,7 @@ program main
 
 
     !-------calling subroutines-------!
-    call water_tank_and_water_column_2d(real(3.1,8),real(3.1,8),real(0.5,8),real(1.0 ,8),3,2)
+    call water_tank_and_water_column_2d(real(3.1,8),real(3.1,8),real(1.05,8),real(3.0 ,8),3,2)
     call mainloopofsimulation
     !-------calling subroutines-------!
 
