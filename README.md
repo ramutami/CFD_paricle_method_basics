@@ -42,7 +42,7 @@ $$\boldsymbol{u}$$
 ```fortran:
 program main
 
-|-initial_particle_position_velocity_particle_type
+|-water_tank_and_water_column_2d
 |-calConstantParameter
 |-mainLoopOfSimulation   
   |-calGravity          
@@ -69,6 +69,35 @@ end program
 ```
 
 ## それぞれのsubroutineの説明
+### water_tank_and_water_column_2d
+　初期の粒子配置を設定するルーチン。
+```txt
+|            |                                                     |           |
+|            |oooooooooooo                                         |           |
+|            |oooooooooooo                                         |           |
+|            |oooooooooooo                                         |           |
+|            |oooooooooooo                                         |           |
+|            |oooooooooooo                                         |           |
+|            |oooooooooooo                                         |           |
+|            |oooooooooooo                                         |           |
+|            |oooooooooooo                                         |           |
+|            |oooooooooooo                                         |           |
+|            |oooooooooooo                                         |           |
+|            |oooooooooooo                                         |           |
+|            |oooooooooooo                                         |           |
+|            |oooooooooooo                                         |           |
+|            |oooooooooooo                                         |           |
+|            |oooooooooooo                                         |           |
+|            |oooooooooooo                                         |           |
+|            |oooooooooooo                                         |           |
+|            |oooooooooooo                                         |           |
+|            |_____________________________________________________|           | 
+|                                                                              | 
+|                                                                              | 
+|                                                                              |  
+|______________________________________________________________________________| 
+```
+こんな感じで水槽と水柱を配置する。具体的には、必要になる粒子の数を```numberofparticles```として、i=1~numberofparticlesの各粒子に対して、粒子の位置を表す```particleposition(i)```や粒子の種類(壁など)を表す```particletype(i)```などを、メモリを確保しながら（allocateしながら）入力していく。
 
 ### mainLoopOfSimuation
 
@@ -126,6 +155,41 @@ $$
 重み関数。
 
 # 各ルーチンの詳細について
+
+## water_tank_and_column_2d
+２次元の水柱に関しての初期状態を定めるルーチン。ルーチンの概要は以下のよう。
+
+```fortran
+subroutine water_tank_and_water_column_2d(x_watertank,y_watertank,x_watercolumn,y_watercolumn,wallthickness,dummywallthickness)
+
+    nx_watertank = ...
+    number_of_particles = ...
+    allocate(particle_position(number_of_particles,3))
+        .
+        .
+        .
+    
+    do iY = ...
+        do iX =...
+        !particle_position(i,:)=...
+        end do 
+    end do
+
+end subroutine
+```
+
+まず、引数として
+```fortran
+x_watertank,y_watertank,x_watercolumn,y_watercolumn,wallthickness,dummywallthickness
+```
+の6つを受け入れる。```x_watertank,y_watertank```で水槽の（内壁の）大きさを定め、```x_watercolumn,y_watercolumn```で水柱の大きさを定め、```wallthickness,dummywallthickness```で各種壁の厚みを定める。いずれも受け入れ引数の単位は[m]。
+　で、あらかじめ設定しておいた初期粒子間距離[m]を用いて、トータルで必要な粒子数```numberofparticles```を求め、```particle_position```等に必要粒子数分のメモリを確保していく。
+ 　その後、```iX,iY```によるループを用いて
+$$
+(\text{iX}\times\text{初期粒子間距離},\text{iY}\times\text{初期粒子間距離},)
+$$
+に位置する粒子についての```particletype(i)```などの情報を入れていく。このループは並列化して行う。
+
 
 ## writeData_inVtuFormat
 VTKフォーマットは可視化のためのフォーマット。空行と空白を同様に扱う。VTKファイルは基本は以下の様な構造になっている.
@@ -210,6 +274,10 @@ VTKフォーマットは可視化のためのフォーマット。空行と空�
 <ins>type</ins>：stucturedは格子データのような規則正しく並んだデータ、unstructuredは粒子データのような不規則に並んだデータ。色々あるっぽいが、粒子法では```unstructuredGrid```を用いる。unstructuredGridは拡張子```.vtu```に対応しているので、このコードでは```.vtu```ファイルに出力している。
 <br>
 
+### piece条件子
+```NumberOfPoints```は粒子数、```NumberOfCell```はセルの数。先に下のpointとcellに関する解説を読んだ方がわかりやすいと思う。
+<br>
+
 ### points
 ```xml
 <Points>
@@ -259,7 +327,7 @@ VTKフォーマットは可視化のためのフォーマット。空行と空�
      |  |
    j .__. l
 ```
-そんな感じに、いろんな形のセルをいくらでも作ることができて、それを指定するのが```<cells>```の項目。（つまり、粒子集合の部分集合がセル）必ず、以下の三つをもつ。
+そんな感じに、いろんな形のセルをいくらでも作ることができて、それを指定するのが```<cells>```の項目。（つまり、粒子集合の部分集合がセル）必ず、以下の三つをもつ。（それぞれ```Name```固定。）
 ```xml
 <Cells>
     <Dataarray type='Int32' Name='connectivity' format='ascii'>
@@ -269,8 +337,7 @@ VTKフォーマットは可視化のためのフォーマット。空行と空�
 ```
 <br>
 
-<ins>**connectivity**</ins>
-まずconnectivityだが、これはcellの頂点に関するデータ。
+<ins>**connectivity**</ins>：まずconnectivityだが、これはcellの頂点に関するデータ。
 ```xml
 <Dataarray type='Int32' Name='connectivity' format='ascii'>
     0 3 5
@@ -302,15 +369,14 @@ VTKフォーマットは可視化のためのフォーマット。空行と空�
 上のコードは、```connectivity```において「三番目までの粒子番号が最初のセル、（四番目から）七番目までの粒子番号が二つ目のセル、...」という指定を行う。
 <br>
 
-<ins>**types**</ins>
-それぞれのcellが三角形なのか四角形なのか、みたいなことを明示してやる必要がある。それぞれの形状とtype番号との対応は[リンク](https://vtk.org/doc/nightly/html/vtkCellType_8h_source.html)にある。今、
+<ins>**types**</ins>：それぞれのcellが三角形なのか四角形なのか、みたいなことを明示してやる必要がある。それぞれの形状とtype番号との対応は[リンク](https://vtk.org/doc/nightly/html/vtkCellType_8h_source.html)にある。今、
 ```cpp
   VTK_TRIANGLE = 5,
   VTK_QUAD = 9,
 ```
 なので、```types```は以下のように書けば良いとわかる。
 ```xml
-<Dataarray type='Int32' Name='types 'format='ascii'>
+<Dataarray type='UInt8' Name='types 'format='ascii'>
     5
     9
     .
@@ -318,6 +384,49 @@ VTKフォーマットは可視化のためのフォーマット。空行と空�
     .
 </Dataarray>
 ```
-<br>
-### celldata
+ちなみに、```types```の種類的に、```UINT8``` (符号なし8ビット)で十分だったりする。
 
+### celldata
+pointdataと同様、cellに温度だったり圧力だったりの情報を載せる。
+```xml
+<Dataarray NumberOfComponents='1' type='Int32/Float32/etc' Name='pressure' format='ascii'>
+    10
+    15
+    .
+    .
+    .
+</Dataarray>
+```
+cellの数だけデータ数（行数）が存在することになる。
+<br>
+
+### 粒子法におけるcellの指定
+粒子法においては、cellは（多分）使う必要がない。なので、各点が一つのcellを作るとしてcellデータを記入すれば良い。この時、typesは```VTK_VERTEX=1```なので、1と記入すれば良い。
+```hml
+<cells>
+    <Dataarray type='Int32' Name='connectivity' format='ascii'>
+        0
+        1
+        .
+        .
+        .
+        n-1
+    </Dataarray>
+    <Dataarray type='Int32' Name='offsets' format='asciss'>
+        1
+        2
+        .
+        .
+        .
+        n
+    </Dataarray>
+    <Dataarray type='UInt8' Name='types' format='ascii'>
+        1
+        1
+        1
+        .
+        .
+        .
+    </Dataarray>        
+</cells>
+```
