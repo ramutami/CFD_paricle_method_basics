@@ -22,13 +22,7 @@ $$\dfrac{D\boldsymbol{u}}{Dt}  = -\dfrac{1}{\rho}\nabla P +\nu\nabla^2\mathbf{u}
 $$\Delta \boldsymbol{u} = f\cdot\Delta{t}$$
 $$\Delta \boldsymbol{r} = \Delta\boldsymbol{u}\cdot\Delta{t}$$
 
-のようにして、一ステップ後（すなわち
-$$\Delta t$$
-後）の粒子の位置
-$$\boldsymbol{r}$$
-と粒子の速度
-$$\boldsymbol{u}$$
-を得ることができる。
+のようにして、一ステップ後（すなわち$\Delta t$後）の粒子の位置$\boldsymbol{r}$と粒子の速度$\boldsymbol{u}$を得ることができる。
 
 ## ラグランジュ微分の離散化
 
@@ -107,13 +101,7 @@ end program
 
 $$\dfrac{D\boldsymbol{u}}{Dt}  = -\dfrac{1}{\rho}\nabla P +\nu\nabla^2\mathbf{u}+\boldsymbol{g}$$
 
-のようになっており、流体の加速度
-$$D\boldsymbol{u}/Dt$$は
-$$-1/\rho\cdot\nabla P$$
-、
-$$\nu\nabla^2\mathbf{u}$$、
-$$\boldsymbol{g}$$
-の三つの項目で構成されていることがわかり、それぞれ圧力項、粘性項、重力項と呼ばれる。
+のようになっており、流体の加速度$D\boldsymbol{u}/Dt$は$-1/\rho\cdot\nabla P$、$\nu\nabla^2\mathbf{u}$、$\boldsymbol{g}$の三つの項目で構成されていることがわかり、それぞれ圧力項、粘性項、重力項と呼ばれる。
 　mainLoopOfSimuationにおいては、まず重力項と粘性項をcalGravity、calViscosityによって計算し、それら加速度を用いて一旦粒子の情報をアップデートする。次に、圧力項をcalPressureGradientによって計算し、それを用いて再度粒子の情報をアップデートする。また、calPressureGradientを計算するためにはまず、calPressureを用いて粒子の圧力を計算する。また、これらの計算は壁粒子に対しては行わないように気を付ける。
 
 
@@ -128,9 +116,9 @@ $$\boldsymbol{g}$$
 
 <ins>calPressure</ins>：各粒子位置での圧力を計算するルーチン。以下のcalNumberDensity~setMinimumPressureで構成される。
 
-　今、改めて圧力は
+　今、改めて圧力$P$は
 
-$$-\dfrac{1}{\rho_0}\dfrac{2d}{\lambda^0 n^0}\displaystyle\sum_{j\neq i}\left(P_j^{k+1}-P_i^{k+1}\right)w(|\boldsymbol{r}_j^{\*}-\boldsymbol{r}_i^{\*}|)=\dfrac{1}{\Delta t^2}\dfrac{n_i^{\*}-n^0}{n^0}$$
+$$-\dfrac{1}{\rho_0}\dfrac{2d}{\lambda^0 n^0}\displaystyle\sum_{j\neq i}\left(P_j^{k+1}-P_i^{k+1}\right)w(|\boldsymbol{r}_j^{*}-\boldsymbol{r}_i^{*}|)=\dfrac{1}{\Delta t^2}\dfrac{n_i^{*}-n^0}{n^0}$$
 
 によって計算されるのであった。（詳しくは「<ins>粒子法入門〜流体シミュレーションの基礎から並列計算と可視化まで〜</ins>」参照。）よって、圧力を計算するために必要なのは、
 $$
