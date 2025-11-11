@@ -118,7 +118,7 @@ $$\dfrac{D\boldsymbol{u}}{Dt}  = -\dfrac{1}{\rho}\nabla P +\nu\nabla^2\mathbf{u}
 
 　今、改めて圧力$P$は
 
-$$-\dfrac{1}{\rho_0}\dfrac{2d}{\lambda^0 n^0}\displaystyle\sum_{j\neq i}\left(P_j^{k+1}-P_i^{k+1}\right)w(|\boldsymbol{r}_j^{*}-\boldsymbol{r}_i^{*}|)=\dfrac{1}{\Delta t^2}\dfrac{n_i^{*}-n^0}{n^0}$$
+$$-\dfrac{1}{\rho_0}\dfrac{2d}{\lambda^0 n^0}\displaystyle\sum_{j\neq i}\left(P_j^{k+1}-P_i^{k+1}\right)w(|\boldsymbol{r}_j^{\*}-\boldsymbol{r}_i^{\*}|)=\dfrac{1}{\Delta t^2}\dfrac{n_i^{\*}-n^0}{n^0}$$
 
 によって計算されるのであった。（詳しくは「<ins>粒子法入門〜流体シミュレーションの基礎から並列計算と可視化まで〜</ins>」参照。）よって、圧力を計算するために必要なのは、
 $$
