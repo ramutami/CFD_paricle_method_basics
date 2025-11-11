@@ -34,6 +34,9 @@ module parameters_and_variables_for_simulation
         integer,parameter :: fluid = 1
         integer,parameter :: wall = 2
         integer,parameter :: dummywall = 3
+        real(8),parameter :: g_x = 0.0
+        real(8),parameter :: g_y = -9.80665
+        real(8),parameter :: g_z = 0.0
     !
 
     !global_variables
@@ -256,7 +259,6 @@ module initial_particle_position_velocity_particle_type
             particle_acceleration(i,:) = real(0.0,kind=8)
             particle_type(i) = wall
             Original_layer(i) = iY*particle_distance
-            write(*,*) i
             end do
         end do
         !end $omp parallel do
@@ -381,6 +383,78 @@ module output_module
     end subroutine writedatainvtuformat
 end module output_module
 
+module function_module  
+    implicit none
+    contains 
+
+    real(8) function weight_function(distance,Re)
+        implicit none
+        real(8),intent(in)::distance,Re
+        if (distance<Re) then
+            weight_function =(Re/distance)-1.0
+        else if (distance>=Re) then
+            weight_function = 0.0
+        end if
+        return 
+    end function weight_function
+
+end module function_module
+
+module calculation_module
+    use parameters_and_variables_for_simulation
+    implicit none
+    contains
+
+    subroutine calgravity()
+        !重力項による粒子にかかる加速度
+        implicit none
+        !内部変数
+        integer :: i
+
+        !$omp parallel do
+        do i = 1,number_of_particles
+            if (particle_type(i)== fluid) then
+                particle_acceleration(i,1) = g_x
+                particle_acceleration(i,2) = g_y
+                particle_acceleration(i,3) = g_z
+            end if
+        end do
+        !end $omp parallel do
+
+    end subroutine calgravity
+
+    subroutine calviscosity()
+        implicit none
+
+
+    end subroutine calviscosity
+
+    subroutine moveparticle()
+        !加速度を受けて粒子の位置を更新する
+        implicit none
+        !内部変数
+        integer :: i
+
+        !$omp parallel do
+        do i= 1,number_of_particles
+            if (particle_type(i) == fluid) then
+                !速度の更新
+                particle_velocity(i,1) = particle_velocity(i,1)+particle_acceleration(i,1)*time_interval
+                particle_velocity(i,2) = particle_velocity(i,2)+particle_acceleration(i,2)*time_interval
+                particle_velocity(i,3) = particle_velocity(i,3)+particle_acceleration(i,3)*time_interval
+                !位置の更新
+                particle_position(i,1) = particle_position(i,1)+particle_velocity(i,1)*time_interval
+                particle_position(i,2) = particle_position(i,2)+particle_velocity(i,2)*time_interval
+                particle_position(i,3) = particle_position(i,3)+particle_velocity(i,3)*time_interval
+            end if
+        end do
+        !end $omp parallel do
+
+    end subroutine moveparticle
+
+end module calculation_module
+
+
 module mainloop
     use omp_lib
     use parameters_and_variables_for_simulation
@@ -390,17 +464,30 @@ module mainloop
     contains
 
     subroutine mainloopofsimulation()
+        use calculation_module
         implicit none
-        integer outputstep
+        integer timestep,outputstep
 
 
         !outputstep = 0
         !do while not end sim, call writedatainvtu(outputstep),
         !then, outputstep+=1
 
-        do  outputstep= 0,5
-            call writedatainvtuformat(outputstep)
-        end do
+        outputstep=0
+        mainloop : do  timestep= 0,20000
+            !初回の処理
+            if(timestep == 0)then
+                call writedatainvtuformat(0)
+                cycle mainloop
+            end if
+            call calgravity()
+            call moveparticle()
+            if (mod(timestep,20)==0) then
+                outputstep=outputstep+1
+                call writedatainvtuformat(outputstep)
+                write(*,*) time_interval*outputstep
+            end if
+        end do mainloop 
 
     end subroutine
     
@@ -417,7 +504,7 @@ program main
 
 
     !-------calling subroutines-------!
-    call water_tank_and_water_column_2d(real(3.1,8),real(3.1,8),real(1.05,8),real(3.0 ,8),3,2)
+    call water_tank_and_water_column_2d(real(2.0,8),real(1.2,8),real(1.0,8),real(1.2 ,8),3,2)
     call mainloopofsimulation
     !-------calling subroutines-------!
 
