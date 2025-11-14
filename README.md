@@ -178,9 +178,24 @@ $$
 $$
 に位置する粒子についての```particletype(i)```などの情報を入れていく。このループは並列化して行う。
 
+## calGravity
+
+重力による加速を求めるルーチン。
+$$
+\left.\dfrac{D\boldsymbol{u}}{Dt}\right|_{gravity} = g\cdot\hat{\boldsymbol{e}}_y
+$$
+であるから、
+```fortran
+Gy=-9.80665
+
+acceleration(i,1) = 0
+acceleration(i,2) = Gy
+acceleration(i,3) = 0
+```
+のように計算すれば良い。
 
 ## writeData_inVtuFormat
-VTKフォーマットは可視化のためのフォーマット。空行と空白を同様に扱う。VTKファイルは基本は以下の様な構造になっている.
+VTK（.vtu）フォーマットに出力するためのサブルーチン。VTKフォーマットは可視化のためのフォーマット。空行と空白を同様に扱う。VTKファイルは基本は以下の様な構造になっている.
 
 ```xml
 <?xml version='1.0',encoding='UTF-8'?>
