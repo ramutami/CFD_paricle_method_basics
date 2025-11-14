@@ -31,12 +31,14 @@ module parameters_and_variables_for_simulation
         real(8),parameter :: finish_time = 2.0
         !------------change allowed--------------!
 
+
         integer,parameter :: fluid = 1
         integer,parameter :: wall = 2
         integer,parameter :: dummywall = 3
         real(8),parameter :: g_x = 0.0
         real(8),parameter :: g_y = -9.80665
         real(8),parameter :: g_z = 0.0
+
     !
 
     !global_variables
@@ -60,6 +62,7 @@ module parameters_and_variables_for_simulation
         real(8),allocatable :: particle_pressure(:)
         real(8),allocatable :: Original_layer(:)
         integer :: number_of_particles
+        real(8) :: n0_for_laplacian
 
     !
 
@@ -280,6 +283,79 @@ module initial_particle_position_velocity_particle_type
 
 end module initial_particle_position_velocity_particle_type
 
+module function_module  
+    implicit none
+    contains 
+
+    real(8) function weight_function(distance,Re)
+        implicit none
+        real(8),intent(in)::distance,Re
+        if (distance<Re) then
+            weight_function =(Re/distance)-1.0
+        else if (distance>=Re) then
+            weight_function = 0.0
+        end if
+        return 
+    end function weight_function
+
+end module function_module
+
+module calculation_of_parameters
+end module calculation_of_parameters
+
+module calculation_module
+    use parameters_and_variables_for_simulation
+    implicit none
+    contains
+
+    subroutine calgravity()
+        !重力項による粒子にかかる加速度
+        implicit none
+        !内部変数
+        integer :: i
+
+        !$omp parallel do
+        do i = 1,number_of_particles
+            if (particle_type(i)== fluid) then
+                particle_acceleration(i,1) = g_x
+                particle_acceleration(i,2) = g_y
+                particle_acceleration(i,3) = g_z
+            end if
+        end do
+        !end $omp parallel do
+
+    end subroutine calgravity
+
+    subroutine calviscosity()
+        implicit none
+
+
+    end subroutine calviscosity
+
+    subroutine moveparticle()
+        !加速度を受けて粒子の位置を更新する
+        implicit none
+        !内部変数
+        integer :: i
+
+        !$omp parallel do
+        do i= 1,number_of_particles
+            if (particle_type(i) == fluid) then
+                !速度の更新
+                particle_velocity(i,1) = particle_velocity(i,1)+particle_acceleration(i,1)*time_interval
+                particle_velocity(i,2) = particle_velocity(i,2)+particle_acceleration(i,2)*time_interval
+                particle_velocity(i,3) = particle_velocity(i,3)+particle_acceleration(i,3)*time_interval
+                !位置の更新
+                particle_position(i,1) = particle_position(i,1)+particle_velocity(i,1)*time_interval
+                particle_position(i,2) = particle_position(i,2)+particle_velocity(i,2)*time_interval
+                particle_position(i,3) = particle_position(i,3)+particle_velocity(i,3)*time_interval
+            end if
+        end do
+        !end $omp parallel do
+
+    end subroutine moveparticle
+
+end module calculation_module
 
 module output_module
     use parameters_and_variables_for_simulation
@@ -382,78 +458,6 @@ module output_module
         close(10)
     end subroutine writedatainvtuformat
 end module output_module
-
-module function_module  
-    implicit none
-    contains 
-
-    real(8) function weight_function(distance,Re)
-        implicit none
-        real(8),intent(in)::distance,Re
-        if (distance<Re) then
-            weight_function =(Re/distance)-1.0
-        else if (distance>=Re) then
-            weight_function = 0.0
-        end if
-        return 
-    end function weight_function
-
-end module function_module
-
-module calculation_module
-    use parameters_and_variables_for_simulation
-    implicit none
-    contains
-
-    subroutine calgravity()
-        !重力項による粒子にかかる加速度
-        implicit none
-        !内部変数
-        integer :: i
-
-        !$omp parallel do
-        do i = 1,number_of_particles
-            if (particle_type(i)== fluid) then
-                particle_acceleration(i,1) = g_x
-                particle_acceleration(i,2) = g_y
-                particle_acceleration(i,3) = g_z
-            end if
-        end do
-        !end $omp parallel do
-
-    end subroutine calgravity
-
-    subroutine calviscosity()
-        implicit none
-
-
-    end subroutine calviscosity
-
-    subroutine moveparticle()
-        !加速度を受けて粒子の位置を更新する
-        implicit none
-        !内部変数
-        integer :: i
-
-        !$omp parallel do
-        do i= 1,number_of_particles
-            if (particle_type(i) == fluid) then
-                !速度の更新
-                particle_velocity(i,1) = particle_velocity(i,1)+particle_acceleration(i,1)*time_interval
-                particle_velocity(i,2) = particle_velocity(i,2)+particle_acceleration(i,2)*time_interval
-                particle_velocity(i,3) = particle_velocity(i,3)+particle_acceleration(i,3)*time_interval
-                !位置の更新
-                particle_position(i,1) = particle_position(i,1)+particle_velocity(i,1)*time_interval
-                particle_position(i,2) = particle_position(i,2)+particle_velocity(i,2)*time_interval
-                particle_position(i,3) = particle_position(i,3)+particle_velocity(i,3)*time_interval
-            end if
-        end do
-        !end $omp parallel do
-
-    end subroutine moveparticle
-
-end module calculation_module
-
 
 module mainloop
     use omp_lib

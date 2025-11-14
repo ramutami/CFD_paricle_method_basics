@@ -19,14 +19,93 @@ $$\dfrac{D\boldsymbol{u}}{Dt}  = -\dfrac{1}{\rho}\nabla P +\nu\nabla^2\mathbf{u}
 
 この式を時間について離散化すれば、
 
-$$\Delta \boldsymbol{u} = f\cdot\Delta{t}$$
+$$\Delta \boldsymbol{u} = * \cdot\Delta{t}$$
 $$\Delta \boldsymbol{r} = \Delta\boldsymbol{u}\cdot\Delta{t}$$
 
 のようにして、一ステップ後（すなわち $\Delta t$ 後）の粒子の位置 $\boldsymbol{r}$ と粒子の速度 $\boldsymbol{u}$ を得ることができる。
 
-## ラグランジュ微分の離散化
+以下、各計算で影響半径という概念を用いる。すなわち、注目している粒子から（恣意的に定めて）一定の距離内のみに存在する粒子について計算を行う。
 
-## 粘性項の離散化
+## ナブラ演算子（圧力項）の離散化
+まず、ナブラ演算子 $\nabla$ の離散化を考える。
+
+まずは、すごいざっくりした場合で考察する。今、二次元系で粒子がブワーってあったとする。さらに、粒子間のベクトル $\boldsymbol{X}_{i+1}-\boldsymbol{X}_{i}$ と $\boldsymbol{X}_{i+2}-\boldsymbol{X}_{i}$ が正規直行系をなすとする。
+
+```txt
+        o <- i+2
+        |
+   i -> o----o <- i+1
+```
+
+今ある座標系 $X,Y$ に対し一般に
+
+$$
+\nabla\phi = \dfrac{\partial \phi}{\partial X}\nabla X + \dfrac{\partial \phi}{\partial Y}\nabla Y
+$$
+
+で、 $X,Y$ が正規直交なら $\nabla X=\hat{\boldsymbol{e}}_X$ などから
+
+$$
+\nabla\phi = \dfrac{\partial \phi}{\partial X}\hat{\boldsymbol{e}}_X + \dfrac{\partial \phi}{\partial Y}\hat{\boldsymbol{e}}_Y
+$$
+
+となる。よって、
+
+$$
+\nabla\phi = \dfrac{\partial \phi}{\partial X_{\text{i+１方向}}}\dfrac{\boldsymbol{X}_{i+1}-\boldsymbol{X}_{i}}{|\boldsymbol{X}_{i+1}-\boldsymbol{X}_{i}|} + \dfrac{\partial \phi}{\partial X_{\text{i+2方向}}}\dfrac{\boldsymbol{X}_{i+2}-\boldsymbol{X}_{i}}{|\boldsymbol{X}_{i+2}-\boldsymbol{X}_{i}|}
+$$
+であり、偏微分演算子を離散化すれば
+
+$$
+\nabla\phi = \dfrac{\phi(\boldsymbol{X}_{i+1})-\phi(\boldsymbol{X}_{i})}{|\boldsymbol{X}_{i+1}-\boldsymbol{X}_{i}|}\dfrac{\boldsymbol{X}_{i+1}-\boldsymbol{X}_{i}}{|\boldsymbol{X}_{i+1}-\boldsymbol{X}_{i}|} + \dfrac{\phi(\boldsymbol{X}_{i+2})-\phi(\boldsymbol{X}_{i})}{|\boldsymbol{X}_{i+2}-\boldsymbol{X}_{i}|}\dfrac{\boldsymbol{X}_{i+2}-\boldsymbol{X}_{i}}{|\boldsymbol{X}_{i+1}-\boldsymbol{X}_{i}|}
+$$
+
+となる。よって今、影響半径内の総粒子数を $N$ として、全ての粒子 $\boldsymbol{X}_{j}$ に対し $\boldsymbol{X}_{j}-\boldsymbol{X}_{i}$ と $\boldsymbol{X}_{j'}-\boldsymbol{X}_{i}$　を満たすような $\boldsymbol{X}_{j'}$ が存在している（すなわち上の式が成立）と仮定する。このとき、 $N$ この粒子に対し上式を足し合わせれば（どの粒子も二回現れることに注意して）
+
+$$
+N\nabla\phi = 2\displaystyle\sum_{i\neq j}\dfrac{\phi(\boldsymbol{X}_{j})-\phi(\boldsymbol{X}_{i})}{|\boldsymbol{X}_{j}-\boldsymbol{X}_{i}|}\dfrac{\boldsymbol{X}_{j}-\boldsymbol{X}_{i}}{|\boldsymbol{X}_{j}-\boldsymbol{X}_{i}|}
+$$
+
+となる。
+
+さて、実際の液体中の粒子はこんなに都合が良くはない。そもそも、綺麗に正規直行関係にある粒子ペアが必ず見つかるとは限らない上に、粒子 $X_{i}$ から遠い粒子が式に食い込むほど近似精度は悪くなってしまう。そこで、「まあざっくり上のような足し合わせでええやろ、でも重み関数をかけながら足し合わせて行こう」みたいなことを考えるわけで、それにより
+
+$$
+\left(\displaystyle\sum_{i\neq j}{w(|\boldsymbol{X}_{j}-\boldsymbol{X}_{i}|)}\right)\nabla\phi = 2\displaystyle\sum_{i\neq j}\dfrac{\phi(\boldsymbol{X}_{j})-\phi(\boldsymbol{X}_{i})}{|\boldsymbol{X}_{j}-\boldsymbol{X}_{i}|}\dfrac{\boldsymbol{X}_{j}-\boldsymbol{X}_{i}}{|\boldsymbol{X}_{j}-\boldsymbol{X}_{i}|}w(|\boldsymbol{X}_{j}-\boldsymbol{X}_{i}|)
+$$
+
+という離散化の式を考えることができる。（重み関数とは、距離が遠くなるほど値が小さくなり、影響半径で０となるような関数である。いろんな形があるンゴ。）今、上の式の $2$ は二次元を仮定したことにより出てきた式であるから、次元数 $d$ をもちいて $2\rightarrow d $を書き換えることにする。また今、重みつき和の規格化定数である
+
+$$
+n^i = \displaystyle\sum_{i\neq j}{w(|\boldsymbol{X}_{j}-\boldsymbol{X}_{i}|)}
+$$
+
+については、初期状態で適当な液体内部粒子について計算しておいた値
+
+$$
+n_0 = \displaystyle\sum_{i\neq j}{w(|\boldsymbol{X}_{j}^{0}-\boldsymbol{X}_{i}^{0}|)}
+$$
+
+を用いて計算することにする。（この近似は後藤先生の粒子法の教科書に従っている。この近似は、「液体内部の粒子すう密度はまあ変わらんやろ」という近似だと思うのだが、表面粒子においてはこの近似による誤差が生じるはずで、その誤差がどこで吸収されているのかいまいち理解していない。）これを用いれば、
+
+$$
+\nabla\phi = \dfrac{d}{n^0}\displaystyle\sum_{i\neq j}\dfrac{\phi(\boldsymbol{X}_{j})-\phi(\boldsymbol{X}_{i})}{|\boldsymbol{X}_{j}-\boldsymbol{X}_{i}|}\dfrac{\boldsymbol{X}_{j}-\boldsymbol{X}_{i}}{|\boldsymbol{X}_{j}-\boldsymbol{X}_{i}|}w(|\boldsymbol{X}_{j}-\boldsymbol{X}_{i}|)
+$$
+
+## ラプラシアン（粘性項）の離散化
+ナブラの場合と似たように考えていくことができて（めんどくさいので割愛）、
+
+$$
+\nabla^2 \phi= \dfrac{2d}{\lambda_0 n^0}\displaystyle\sum_{i\neq j}(\phi(\boldsymbol{X}_{j})-\phi(\boldsymbol{X}_{i}))w(|\boldsymbol{X}_{j}-\boldsymbol{X}_{i}|)
+$$
+
+という離散化を考えることができる。ただし、
+
+$$
+\lambda_0 = \dfrac{1}{n^0}\displaystyle\sum_{i\neq j}|\boldsymbol{X}_j -\boldsymbol{X}_i|^2 w(|\boldsymbol{X}_{j}-\boldsymbol{X}_{i}|)
+$$
+
+である。
 
 ## 圧力項の計算
 
@@ -197,6 +276,10 @@ acceleration(i,2) = Gy
 acceleration(i,3) = 0
 ```
 のように計算すれば良い。
+
+## calViscosity
+
+
 
 ## writeData_inVtuFormat
 VTK（.vtu）フォーマットに出力するためのサブルーチン。VTKフォーマットは可視化のためのフォーマット。空行と空白を同様に扱う。VTKファイルは基本は以下の様な構造になっている.
