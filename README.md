@@ -173,17 +173,21 @@ x_watertank,y_watertank,x_watercolumn,y_watercolumn,wallthickness,dummywallthick
 の6つを受け入れる。```x_watertank,y_watertank```で水槽の（内壁の）大きさを定め、```x_watercolumn,y_watercolumn```で水柱の大きさを定め、```wallthickness,dummywallthickness```で各種壁の厚みを定める。いずれも受け入れ引数の単位は[m]。
 　で、あらかじめ設定しておいた初期粒子間距離[m]を用いて、トータルで必要な粒子数```numberofparticles```を求め、```particle_position```等に必要粒子数分のメモリを確保していく。
  　その後、```iX,iY```によるループを用いて
+
 $$
 (\text{iX}\times\text{初期粒子間距離},\text{iY}\times\text{初期粒子間距離},)
 $$
+
 に位置する粒子についての```particletype(i)```などの情報を入れていく。このループは並列化して行う。
 
 ## calGravity
 
 重力による加速を求めるルーチン。
+
 $$
 \left.\dfrac{D\boldsymbol{u}}{Dt}\right|_{gravity} = g\cdot\hat{\boldsymbol{e}}_y
 $$
+
 であるから、
 ```fortran
 Gy=-9.80665
