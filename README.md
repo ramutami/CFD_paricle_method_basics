@@ -259,6 +259,58 @@ $$
 
 に位置する粒子についての```particletype(i)```などの情報を入れていく。このループは並列化して行う。
 
+## calConstParameter
+計算で用いる定数を計算するサブルーチン。まず、
+
+$$
+n^0 = \displaystyle\sum_{i\neq j}w(|\boldsymbol{X}_j-\boldsymbol{X}_i|)
+$$
+
+の値を計算する。このとき、用いる影響半径 $R_e$ は $n^0$ の用途によって異なることに注意する。
+
+例えばラプラシアン計算用の $n^0$ とついでに $\lambda_0$ を計算するプログラムの概要は、
+```fortran
+subroutine calc_n0_for_lambda_and_lambda_for_laplacian
+
+
+    i_for_Re = floor(Re_for_laplacian/particle_distance)+1
+        
+    if (dimention == 2) then
+    
+        do iX = -i_for_Re,i_for_Re  
+            do iY = -i_for_Re,i_for_Re  
+
+                xdist = real(iX,8)*particle_distance
+                ydist = …
+
+                distance = sqrt(xdist**2 + ydist**2)
+
+                if(iX == 0 .nor. iY == 0) then
+                    w = weight_function(distance,Re_for_laplacian) 
+                end if
+
+                n0_for_laplacian = n0_for_laplacian + w
+                lambda = lambda + (distance**2) * w
+                
+            end do
+        end do
+        lambda_0 = lambda/n0_for_laplacian
+    end if
+
+
+end subroutine calc_n0_and_lambda_for_laplacian
+
+```
+みたいな形。
+
+```fortran
+i_for_Re = floor(Re_for_laplacian/particle_distance)+1
+```
+
+で、初期粒子数密度 $n^0$ の計算に用いる液体内部粒子のおおよその範囲を定めている。この範囲内で、初期粒子間距離に従って粒子を配置して、諸々の値を計算しているイメージ。
+
+
+
 ## calGravity
 
 重力による加速を求めるルーチン。
@@ -278,6 +330,14 @@ acceleration(i,3) = 0
 のように計算すれば良い。
 
 ## calViscosity
+
+改めて粘性項の離散化は、先に示したラプラシアンの離散化を用いて
+
+$$
+\nabla^2 \boldsymbol{u}= \dfrac{\nu \cdot 2d}{\lambda_0 n^0}\displaystyle\sum_{i\neq j}(\boldsymbol{u}(\boldsymbol{X}_{j})-\boldsymbol{u}(\boldsymbol{X}_{i}))w(|\boldsymbol{X}_{j}-\boldsymbol{X}_{i}|)
+$$
+
+となる。動粘性係数（単位：m^2/s）については、適当な文献を参照すればいい。これは自由に変更できるパラメタになっている。
 
 
 

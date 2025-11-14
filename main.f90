@@ -25,10 +25,12 @@ module parameters_and_variables_for_simulation
         !finish_time: 終了時刻[s]
 
         !------------change allowed--------------!
+        integer :: dimention = 2
         real(8),parameter :: particle_distance=0.025
         real(8),parameter :: time_interval=0.001
         integer, parameter :: output_interval=20
         real(8),parameter :: finish_time = 2.0
+        real(8),parameter :: viscosity = 100.0e-6
         !------------change allowed--------------!
 
 
@@ -38,7 +40,7 @@ module parameters_and_variables_for_simulation
         real(8),parameter :: g_x = 0.0
         real(8),parameter :: g_y = -9.80665
         real(8),parameter :: g_z = 0.0
-
+        real(8),parameter :: Re_for_laplacian = 3.1*particle_distance
     !
 
     !global_variables
@@ -63,6 +65,7 @@ module parameters_and_variables_for_simulation
         real(8),allocatable :: Original_layer(:)
         integer :: number_of_particles
         real(8) :: n0_for_laplacian
+        real(8) :: lambda_0
 
     !
 
@@ -301,10 +304,85 @@ module function_module
 end module function_module
 
 module calculation_of_parameters
+    use parameters_and_variables_for_simulation
+    use function_module
+    implicit none
+
+    contains
+    subroutine calculation_parameters
+        implicit none
+        call calc_n0_for_lambda_and_lambda_for_laplacian()
+    end subroutine calculation_parameters
+
+    subroutine calc_n0_for_lambda_and_lambda_for_laplacian
+        !real(8) :: n0_for_laplacian を計算する。
+        !real(8) :: lambda_0を計算する
+        implicit none
+        integer :: i_for_Re
+        integer :: iX,iY,iZ
+        integer :: iZ_max
+        real(8) :: xdist,ydist,zdist,distance
+        real(8) :: w,lambda
+
+
+        i_for_Re = floor(Re_for_laplacian/particle_distance)+1
+        write(*,*) i_for_Re
+        n0_for_laplacian = 0.0_8
+        lambda = 0.0_8
+        
+        
+        if (dimention == 2) then
+            !$omp parallel do reduction(+:n0_for_laplacian,lambda) &
+            !$omp& private(iY, xdist, ydist, distance, w)
+            do iX = -i_for_Re,i_for_Re  
+                do iY = -i_for_Re,i_for_Re  
+                    xdist = real(iX,8)*particle_distance
+                    ydist = real(iY,8)*particle_distance
+                    distance = sqrt(xdist**2 + ydist**2)
+                    if(iX == 0 .and. iY == 0) then
+                        w = 0.0_8
+                    else
+                        w = weight_function(distance,Re_for_laplacian) 
+                    end if
+                    n0_for_laplacian = n0_for_laplacian + w
+                    lambda = lambda + (distance**2) * w
+                    
+                end do
+            end do
+            !$omp end parallel do 
+            lambda_0 = lambda/n0_for_laplacian
+        end if
+
+        if (dimention== 3) then  
+            !$omp parallel do reduction(+:n0_for_laplacian,lambda) &
+            !$omp& private(iY,iZ, xdist, ydist,zdist,distance, w)
+            do iX = -i_for_Re,i_for_Re  
+                do iY = -i_for_Re,i_for_Re  
+                    do iZ = -i_for_Re,i_for_Re  
+                        xdist = real(iX,8)*particle_distance
+                        ydist = real(iY,8)*particle_distance
+                        zdist = real(iZ,8)*particle_distance
+                        distance = sqrt(xdist**2.0 + ydist**2.0 + zdist**2.0)
+                        if(iX == 0 .and. iY == 0 .and. iZ == 0) then
+                            w = 0
+                        else
+                            w = weight_function(distance,Re_for_laplacian) 
+                        end if
+                        n0_for_laplacian = n0_for_laplacian + w
+                        lambda = lambda + (distance**2) * w
+                    end do
+                    
+                end do
+            end do
+            !$omp end parallel do 
+            lambda_0 = lambda/n0_for_laplacian
+        end if
+    end subroutine calc_n0_for_lambda_and_lambda_for_laplacian
 end module calculation_of_parameters
 
 module calculation_module
     use parameters_and_variables_for_simulation
+    use function_module
     implicit none
     contains
 
@@ -317,18 +395,67 @@ module calculation_module
         !$omp parallel do
         do i = 1,number_of_particles
             if (particle_type(i)== fluid) then
-                particle_acceleration(i,1) = g_x
-                particle_acceleration(i,2) = g_y
-                particle_acceleration(i,3) = g_z
+                particle_acceleration(i,1) = particle_acceleration(i,1)+g_x
+                particle_acceleration(i,2) = particle_acceleration(i,2)+g_y
+                particle_acceleration(i,3) = particle_acceleration(i,3)+g_z
             end if
         end do
-        !end $omp parallel do
+        !$omp end parallel do
 
     end subroutine calgravity
 
     subroutine calviscosity()
         implicit none
+        real(8) :: a
+        integer :: i,j
+        real(8) :: viscosity_term(3)
+        real(8) :: xdist,ydist,zdist,distance
+        real(8) :: w
 
+        a = (viscosity*2.0_8*dimention)/(n0_for_laplacian*lambda_0)
+
+
+
+        loopi : do i = 1,number_of_particles
+            !wall,dummywallについては計算しない
+            if(Particle_type(i)==wall .or. particle_type(i)==dummywall) then
+                cycle loopi
+            end if
+            viscosity_term(:) = 0.0_8
+
+            !i以外のjについての計算。
+            loopj : do j=1,number_of_particles
+                !dummywallはviscositytermの計算に利用しない
+                !j=iについては和を取らない
+                if(Particle_type(j)==dummywall .or. j==i) then
+                    cycle loopj
+                end if
+
+                !具体的な計算
+                !|xj-xi|
+                xdist = particle_position(j,1)-particle_position(i,1)
+                ydist = particle_position(j,2)-particle_position(i,2)
+                zdist = particle_position(j,3)-particle_position(i,3)
+                distance = sqrt(xdist**2.0_8 + ydist**2.0_8 + zdist**2.0_8)
+
+                !メインのsum
+                if (distance < Re_for_laplacian*1.1_8) then
+                    w = weight_function(distance,Re_for_laplacian)
+                    viscosity_term(1) = viscosity_term(1)+(particle_velocity(j,1)-particle_velocity(i,1))*w
+                    viscosity_term(2) = viscosity_term(2)+(particle_velocity(j,2)-particle_velocity(i,2))*w
+                    viscosity_term(3) = viscosity_term(3)+(particle_velocity(j,3)-particle_velocity(i,3))*w
+                end if
+            end do loopj
+
+            !係数をかける
+            viscosity_term(:) = a*viscosity_term(:)
+
+            !加速度に加える
+            particle_acceleration(i,1)=particle_acceleration(i,1)+viscosity_term(1)
+            particle_acceleration(i,2)=particle_acceleration(i,2)+viscosity_term(2)
+            particle_acceleration(i,3)=particle_acceleration(i,3)+viscosity_term(3)
+
+        end do loopi
 
     end subroutine calviscosity
 
@@ -350,8 +477,12 @@ module calculation_module
                 particle_position(i,2) = particle_position(i,2)+particle_velocity(i,2)*time_interval
                 particle_position(i,3) = particle_position(i,3)+particle_velocity(i,3)*time_interval
             end if
+
+            particle_acceleration(i,:) = 0.0
+
         end do
         !end $omp parallel do
+
 
     end subroutine moveparticle
 
@@ -478,18 +609,19 @@ module mainloop
         !then, outputstep+=1
 
         outputstep=0
-        mainloop : do  timestep= 0,20000
+        mainloop : do  timestep= 0,1000
             !初回の処理
             if(timestep == 0)then
                 call writedatainvtuformat(0)
                 cycle mainloop
             end if
             call calgravity()
+            call calviscosity()
             call moveparticle()
             if (mod(timestep,20)==0) then
                 outputstep=outputstep+1
                 call writedatainvtuformat(outputstep)
-                write(*,*) time_interval*outputstep
+                write(*,*) outputstep
             end if
         end do mainloop 
 
@@ -502,6 +634,7 @@ end module mainloop
 program main 
     !---------modules----------!
     use initial_particle_position_velocity_particle_type
+    use calculation_of_parameters
     use mainloop
     !---------modules----------!
     implicit none
@@ -509,6 +642,7 @@ program main
 
     !-------calling subroutines-------!
     call water_tank_and_water_column_2d(real(2.0,8),real(1.2,8),real(1.0,8),real(1.2 ,8),3,2)
+    call calculation_parameters
     call mainloopofsimulation
     !-------calling subroutines-------!
 
