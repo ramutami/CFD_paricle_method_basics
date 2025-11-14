@@ -101,7 +101,7 @@ end program
 
 $$\dfrac{D\boldsymbol{u}}{Dt}  = -\dfrac{1}{\rho}\nabla P +\nu\nabla^2\mathbf{u}+\boldsymbol{g}$$
 
-のようになっており、流体の加速度$D\boldsymbol{u}/Dt$は$-1/\rho\cdot\nabla P$、$\nu\nabla^2\mathbf{u}$、$\boldsymbol{g}$の三つの項目で構成されていることがわかり、それぞれ圧力項、粘性項、重力項と呼ばれる。
+のようになっており、流体の加速度 $D\boldsymbol{u}/Dt$ は $-1/\rho\cdot\nabla P$ 、 $\nu\nabla^2\mathbf{u}$ 、 $\boldsymbol{g}$ の三つの項目で構成されていることがわかり、それぞれ圧力項、粘性項、重力項と呼ばれる。
 　mainLoopOfSimuationにおいては、まず重力項と粘性項をcalGravity、calViscosityによって計算し、それら加速度を用いて一旦粒子の情報をアップデートする。次に、圧力項をcalPressureGradientによって計算し、それを用いて再度粒子の情報をアップデートする。また、calPressureGradientを計算するためにはまず、calPressureを用いて粒子の圧力を計算する。また、これらの計算は壁粒子に対しては行わないように気を付ける。
 
 
